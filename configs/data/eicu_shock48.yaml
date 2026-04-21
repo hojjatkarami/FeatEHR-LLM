@@ -1,0 +1,6 @@
+name: eicu_shock48
+path: "./data/eicu/preprocessed/Shock_48h/{split}Dataset.pkl"
+units: "./data/eicu/preprocessed/units.json"
+task: "predict if patient will have sepsis shock in the ICU using first 48 hours patient's data in the ICU"
+history: 48
+label: label_Shock_48h

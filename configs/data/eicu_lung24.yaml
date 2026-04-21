@@ -1,0 +1,6 @@
+name: eicu_lung24
+path: "./data/eicu/preprocessed/LUNG_24h/{split}Dataset.pkl"
+units: "./data/eicu/preprocessed/units.json"
+task: "predict in-hospital mortality using ICU data of lung cancer patients"
+history: 24
+label: label_LUNG_24h

@@ -1,0 +1,97 @@
+defaults:
+  - data: p12
+  - tools: minimal
+  # - logging: logging
+  - _self_
+
+hydra:
+  run:
+    dir: ./results/${data.name}/${version}
+
+log:
+  level: INFO
+
+n_processes:
+  rules: 100
+  eval: 100
+
+type: single
+version: v295
+n_min: 0
+n_max: 5000
+
+
+mi_threshold: 0.005
+mi_error_th: 0.1
+
+llm:
+  model: gemini-2.0-flash
+  max_new_tokens: 14000
+  temperature: 1
+  n_return: 5
+
+wandb:
+  project: paper4
+  name: ${data.name}-${version}-single
+
+
+prompts:
+  design_rule: |
+    Your task is to {TASK}.
+
+    You are given access to the patient's *{var_name}* time series data and the unit is ({var_unit}).
+
+    Design *{n_return}* **clinically relevant** function(s) for the variable below:
+
+    **Variable:** {prompt_variable}
+
+    ### Requirements:
+    - The functions must **go beyond basic statistics** (e.g., avoid mean, min, max, median, std, variance).
+    - Each function should reflect **clinical reasoning** and provide insights relevant to the task.
+    - For **each function**, provide the following:
+
+        1. **Clinical Rationale**: Explain why this question/function is clinically relevant.
+        2. **Python Code**:
+            - Function names should be snake_case and clearly reflect the clinical logic they capture (e.g., has_hypotension_episode, number_of_spikes_above_threshold). 
+            - **Must** Return a **numerical** value (float, int, or boolean). Never return string, NaNs, or None. If no valid measurements are available, the function must return a default value (e.g., 0 or False).
+            - Handle **missing values** appropriately.
+            - Consider that output might be an empty list in the case of no measurements. Please handle
+            - Use backslashes (`\\`) to break long lines.            
+            - Use the provided helper function `get_all_measurements` to extract time series data.
+
+    ---
+
+    ### Helper Function (already provided — do NOT redefine):
+
+    {tools_string}
+
+    ---
+
+    ### Function Template (you must follow this structure):
+
+    def function_name(X: pd.DataFrame) -> int:
+        \"\"\"
+        Description: Clinical feature for *{var_name}* ({var_unit})
+
+        Args:
+            - X: DataFrame with time series data.
+
+        Explanation: Describe the clinical logic here.
+
+
+
+        Returns: A numerical value (float, int, or boolean)
+        \"\"\"
+
+        # 1. Extract time series data
+        measurements = get_all_measurements(X, variable)
+
+        # 2. Implement logic
+        ...
+
+        return ...
+    
+
+    ---
+
+    {prompt_good_functions}

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "featehr-llm"
+version = "0.1.0"
+description = "FeatEHR-LLM: LLM-powered feature engineering for EHR time series"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "catboost",
+  "hydra-core",
+  "lightgbm",
+  "loguru",
+  "numpy",
+  "openai",
+  "optuna",
+  "pandas",
+  "python-dotenv",
+  "pyyaml",
+  "scikit-learn",
+  "scipy",
+  "sktime>=0.30.0",
+  "tabpfn",
+  "tsfresh>=0.20.0",
+  "tqdm",
+  "wandb>=0.13.0",
+  "xgboost",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["scripts"]
+
+[tool.uv]
+resolution = "highest"

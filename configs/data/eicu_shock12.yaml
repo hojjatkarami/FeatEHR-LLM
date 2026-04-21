@@ -1,0 +1,6 @@
+name: eicu_shock12
+path: "./data/eicu/preprocessed/Shock_12h/{split}Dataset.pkl"
+units: "./data/eicu/preprocessed/units.json"
+task: "predict if patient will have sepsis shock in the ICU using first 12 hours patient's data in the ICU"
+history: 12
+label: label_Shock_12h

@@ -1,0 +1,43 @@
+defaults:
+  - data: p12
+  - baseline: autofeat
+  # - logging: logging
+  - _self_
+
+
+
+
+
+
+
+version: v_bl_${baseline.name}
+
+hydra:
+  run:
+    dir: ./results/${data.name}/${version}
+
+log:
+  level: INFO
+
+
+
+
+
+n_max: 400000
+
+
+# # n_min: 0
+# # n_q: 5
+
+# # mi_threshold: 0.005
+# # mi_error_th: 0.1
+
+# llm:
+#   model: gpt-4o-mini
+#   max_new_tokens: 4000
+#   temperature: 1
+#   n_return: 5
+
+wandb:
+  project: paper4
+  name: ${data.name}-${version}

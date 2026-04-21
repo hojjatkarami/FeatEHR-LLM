@@ -1,0 +1,33 @@
+
+# python -m scripts.run_prediction -m 'strategy="",best3,mi_min0.03,first'
+defaults:
+  - data: mimic3
+  - versions: base
+  # - baseline: openfe
+  # - logging: logging
+  - _self_
+
+tag: temp
+
+model: lightgbm
+
+
+strategy: "" # ,"",best3,mi_min0.03,first    strategy="",best3,mi_min0.03,first
+
+
+
+sizes:
+  - 0.1
+  - 0.2
+  - 0.5
+  - 1.0
+
+# # n_min: 0
+n_max: 400000
+n_max_test: 400000
+ignore_cache: False
+
+
+wandb:
+  project: paper4
+  # name: ${version}

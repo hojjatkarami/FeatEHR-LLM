@@ -1,0 +1,6 @@
+name: eicu_mo48
+path: "./data/eicu/preprocessed/mortality_48h/{split}Dataset.pkl"
+units: "./data/eicu/preprocessed/units.json"
+task: "predict in-hospital mortality using 24-hour patient's data in the ICU"
+history: 48
+label: label_mortality_48h

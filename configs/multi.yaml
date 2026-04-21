@@ -1,0 +1,151 @@
+defaults:
+  - data: p12
+  - tools: all
+  - _self_
+  
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+log:
+  level: INFO
+  
+n_processes: 16
+  # rules: 16
+  # eval: 100
+
+
+# memory:
+#   enabled: False
+#   versions:
+#     - v941
+#     - v942
+#     - v943
+#     - v944
+#     - v945    
+#   mi_th: 0.02
+#   max_features: 10
+
+type: multi
+version: v962
+# n_min: 0
+
+
+# was 5000
+n_max: 5000 # a subset of patients to evaluate feature utility
+n_q: 20 # number of clinical questions to be designed
+
+# new_round: False
+
+mi_threshold: 0.005
+mi_error_th: 0.1
+
+llm:
+  model: gpt-4o-mini #gpt-4o-mini gemini-2.0-flash
+  max_new_tokens: 14000
+  temperature: 1
+  n_return: 5 # was 5
+
+wandb:
+  project: paper4
+  name: ${data.name}-${version}-multi
+
+prompts:
+  design_features: |
+    Your task is to {TASK}.
+    
+    ## Available Variables:
+    The dataset includes the following variables, each with its corresponding unit:
+    
+    {variables_description}
+    
+    ## Task:
+    You need to formulate **{n_q} high-level clinical features** based on the dataset. Each feature should assess the patient's overall condition and risk of complications. The requirements are:
+    
+    - **High-Level Focus:**  
+        - Each feature should involve multiple variables. They could be in three levels:
+            - Organ level such as liver, kidney, etc.
+            - System level such as cardiovascular, respiratory, etc.
+            - Disease level such as sepsis, pneumonia, etc.
+        - Do not focus on a single variable or directly mention specific variables in the feature.  
+        - Ensure that the features align with critical decision-making in an ICU setting.
+    
+    - **Format of the feature:**  
+        - Here are some templates:
+            - "What is the risk of ...?"
+            - "How severe is the complication of ...?"
+            - "How well is ...?"
+
+            
+        - The answer can be:
+            - Numerical: an **integer between 0 and 10**, e.g. representing the severity or risk level.                        
+            - Boolean (**0** for 'No' and **1** for 'Yes')
+            
+    - **For each feature, provide:**
+        1. **The feature discription.**  
+        2. **Level in the hierarchy** (organ, system, disease)
+        3. **Clinical relevance for this task**  
+        4. **Which variables could be used to answer it?** Make sure that the variables are in the specified list. 
+        5. **Answer space**
+
+  design_rule: |
+    ### Your task is to {TASK}. You are expected to design a **rule-based system** for the following feature:**
+        
+    **{feature}**
+
+    This can be a combination of threshold-based checks, logical conditions, or a point-based scoring system that reflects clinical assessment.
+    
+    Available variables: {variables_to_use}
+
+
+    ### **Instructions:**
+    1. **Explain clinical logic**: Clearly describe the reasoning behind your rules from clinical perspective.  
+    2. **Implement in Python**:  
+      - Import libraries *inside* the function.  
+      - The function must return an integer value: either a boolean (0 or 1) or an ordinal risk score between 0 and 10. Never return floats, string, NaNs, or None .
+      - Ensure variable names are consistent.  
+      - Handle missing values appropriately.  
+      - Use backslashes (`\`) for breaking lines if necessary.  
+      - the script should be a self-contained function that can be executed independently. (everything needed should be defined inside the function except the helper functions)
+
+    ### Helper Function (already provided — do NOT redefine in the script):
+
+    {tools_string}
+
+    ---
+
+    ### **Function Template:**
+
+    def <function_name>(X: pd.DataFrame, covariates: dict) -> <int/float>:
+        """
+        Variables (unit) to use: {variables_to_use}
+
+        Args:
+            - X: DataFrame with time series data.
+            - covariates (dict): Dictionary of covariates for the patient:
+                - 'age': <patient age>
+                - 'gender': <1 for Male, 0 for Female>
+
+        Explanation of logic: ...
+
+        Returns: <a numerical value>
+        """ 
+        # 0. Define custom functions if needed (Do not redefine Helper functions)
+
+        # 1. Extract variables from DataFrame X using 'get_all_measurements'
+        measurements1 = get_all_measurements(X, variable1) 
+        measurements2 = get_all_measurements(X, variable2)
+        ...
+
+        # 2. Implement rules
+
+        ## Rule 1: <Explain clinical relevance>    
+        ...
+
+        return <An integer between 0 and 10>
+
+    ---
+
+
+    {prompt_memory}
+

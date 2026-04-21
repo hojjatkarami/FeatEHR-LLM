@@ -1,0 +1,7 @@
+list:
+  - get_all_measurements
+  - count_missing_intervals
+  - is_variable_decreasing
+  - is_variable_increasing
+  - is_variable_outlier_prone
+  - is_variable_unstable

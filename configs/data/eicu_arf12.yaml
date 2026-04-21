@@ -1,0 +1,6 @@
+name: eicu_arf12
+path: "./data/eicu/preprocessed/ARF_12h/{split}Dataset.pkl"
+units: "./data/eicu/preprocessed/units.json"
+task: "predict acute respiratory failure from the first 12 hours in the ICU"
+history: 12
+label: label_ARF_12h

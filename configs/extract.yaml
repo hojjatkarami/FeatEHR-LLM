@@ -1,0 +1,23 @@
+defaults:
+  - data: p12
+
+  - _self_
+
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+run_name: TEST
+
+wandb:
+  project: paper4
+
+
+# type: single
+version: v951
+n_min: 0
+n_max: 400000
+n_largest: 10
+split: train
+
+field: mean_mi #  mean_mi

@@ -1,0 +1,37 @@
+defaults:
+  - data: p12s
+
+  - _self_
+
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+log:
+  level: INFO
+  
+# [161336, 137041, 162713, 152081, 139150, 145181, 159471, 142446, 135962, 150688]
+
+
+type: zero
+version: zeroshot(coT)
+n_min: 0
+n_max: 1000
+split: test
+n_q: 20
+
+new_round: False
+
+mi_threshold: 0.005
+mi_error_th: 0.1
+
+llm:
+  model: gpt-4o-mini
+  max_new_tokens: 4000
+  temperature: 1
+  n_return: 1
+
+wandb:
+  project: paper4
+  name: ${data.name}-${version}-zero
+

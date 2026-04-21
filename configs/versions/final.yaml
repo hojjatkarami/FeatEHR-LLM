@@ -1,0 +1,50 @@
+# this is exp5 but using gemini flash2 model
+
+- numeric
+
+
+
+# # Baselines
+# - v_bl_openfe
+# - numeric+v_bl_openfe
+# - v_bl_caafe
+# - numeric+v_bl_caafe
+# - v_bl_featllm
+# - numeric+v_bl_featllm
+
+
+
+
+
+- gflash-25-s1
+- numeric+gflash-25-s1
+- gflash-25-s2
+- numeric+gflash-25-s2
+- gflash-25-s3
+- numeric+gflash-25-s3
+- gflash-25-s4
+- numeric+gflash-25-s4
+- gflash-25-s5
+- numeric+gflash-25-s5
+
+- gflash-25-s1+gflash-25-s2+gflash-25-s3+gflash-25-s4+gflash-25-s5
+- numeric+gflash-25-s1+gflash-25-s2+gflash-25-s3+gflash-25-s4+gflash-25-s5
+
+
+# - gflash-25-m1
+# - numeric+gflash-25-m1
+# - gflash-25-m2
+# - numeric+gflash-25-m2
+# - gflash-25-m3
+# - numeric+gflash-25-m3
+# - gflash-25-m4
+# - numeric+gflash-25-m4
+# - gflash-25-m5
+# - numeric+gflash-25-m5
+
+# - gflash-25-m1+gflash-25-m2+gflash-25-m3+gflash-25-m4+gflash-25-m5
+# - numeric+gflash-25-m1+gflash-25-m2+gflash-25-m3+gflash-25-m4+gflash-25-m5
+
+
+- gflash-25-s1+gflash-25-s2+gflash-25-s3+gflash-25-s4+gflash-25-s5+gflash-25-m1+gflash-25-m2+gflash-25-m3+gflash-25-m4+gflash-25-m5
+- numeric+gflash-25-s1+gflash-25-s2+gflash-25-s3+gflash-25-s4+gflash-25-s5+gflash-25-m1+gflash-25-m2+gflash-25-m3+gflash-25-m4+gflash-25-m5
