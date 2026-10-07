@@ -1,30 +1,9 @@
 #!/bin/bash
+set -e
 
-cd /home/hokarami/code/FeatEHR-LLM/baselines
-source activate featehr-llm
-
-
-# # install CAAFE
-# git clone https://github.com/noahho/CAAFE.git
-# cd CAAFE
-# pip install -e .
-# pip install openml
-# cd ..
-
-
-# # install OpenFE
-# git clone https://github.com/IIIS-Li-Group/OpenFE.git
-# cd OpenFE
-# pip install -e .
-# cd ..
-
-
-# # install autofeat
-# pip install autofeat
-
-
-
-cd /home/hokarami/code/FeatEHR-LLM
+# Navigate to project root directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+cd "$SCRIPT_DIR"
 
 
 # Datasets to process

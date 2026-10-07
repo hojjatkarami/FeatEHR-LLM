@@ -2,11 +2,9 @@
 
 # set -e  # Exit on error
 
-# # Navigate to project directory and activate conda environment
-# cd /home/hokarami/code/FeatEHR-LLM
-# # conda env create -f environment.yml
-# # source activate featehr-llm
-source .venv/bin/activate
+# Navigate to project directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+cd "$SCRIPT_DIR"
 
 # =============================================================================
 # Configuration

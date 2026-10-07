@@ -1,18 +1,9 @@
 #!/bin/bash
+set -e
 
-cd /home/hokarami/code/aaa/deepseek/paper4
-source activate paper4
-
-# python -m scripts.run_prediction data=p12 tag=ablation1 versions=mr strategy="first"
-
-
-# python -m scripts.run_prediction data=mimic3 tag=ablation1 versions=mr strategy=""
-# python -m scripts.run_prediction data=p19 tag=ablation1 versions=mr strategy=""
-
-# ablation
-# python -m scripts.run_prediction data=p12 tag=ablation1 versions=sr strategy=first          
-# python -m scripts.run_prediction data=p12 tag=ablation1 versions=sr strategy=best5          
-# python -m scripts.run_prediction data=p12 tag=ablation1 versions=sr strategy=""         
+# Navigate to project root directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+cd "$SCRIPT_DIR"         
 
 
 DATAS=(
@@ -29,10 +20,10 @@ DATAS=(
 for DATA in "${DATAS[@]}"; do
 
 
-    # python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=first          
-    # python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=best1
-    # python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=best3          
-    python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=""         
+    # uv run python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=first          
+    # uv run python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=best1
+    # uv run python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=best3          
+    uv run python -m scripts.run_prediction data=$DATA tag=ab22 versions=ab2 strategy=""         
 
 
 

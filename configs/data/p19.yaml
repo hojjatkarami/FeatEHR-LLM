@@ -1,6 +1,6 @@
 name: p19
-path: "./data/TimEHR/p19v2-real/split0/{split}Dataset.pkl"
-units: "./data/TimEHR/p19v2-real/split0/units.json"
+path: "./data/p19v2-real/split0/{split}Dataset.pkl"
+units: "./data/p19v2-real/split0/units.json"
 task: "predict if patient will have sepsis shock in the ICU using patient's data in the ICU"
 history: 1000
 label: 'label_ihm'

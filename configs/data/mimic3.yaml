@@ -1,6 +1,6 @@
 name: mimic3
-path: "./data/SynEHRgy/processed/mimic3/{split}Dataset.pkl"
-units: "./data/SynEHRgy/processed/mimic3/units.json"
+path: "./data/mimic3/{split}Dataset.pkl"
+units: "./data/mimic3/units.json"
 task: "predict in-hospital mortality using 24-hour patient's data in the ICU"
 history: 48
 label: 'label_ihm'

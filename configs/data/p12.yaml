@@ -1,6 +1,6 @@
 name: p12
-path: "./data/TimEHR/p12-real/split0/{split}Dataset.pkl"
-units: "./data/TimEHR/p12-real/split0/units.json"
+path: "./data/p12-real/split0/{split}Dataset.pkl"
+units: "./data/p12-real/split0/units.json"
 task: "predict in-hospital mortality using 48-hour patient's data in the ICU"
 history: 48
 label: 'label_ihm'
