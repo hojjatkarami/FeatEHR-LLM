@@ -3,6 +3,7 @@ import multiprocessing as mp
 import os
 import pickle
 import random
+import sys
 import traceback
 import warnings
 from functools import partial
@@ -18,27 +19,200 @@ from tqdm import tqdm
 from loguru import logger
 import wandb
 import yaml
+from dotenv import find_dotenv, load_dotenv
+
+# Ensure environment variables are loaded across multiprocessing workers
+load_dotenv(find_dotenv(usecwd=True), override=True)
 
 from scripts.tools import *
 
 
-def get_llm_client(model_name):
-    # Initialize the OpenAI client with the specified model
+def get_llm_client(model_name: str = None):
+    """
+    Initialize an OpenAI-compatible client for the specified model.
+    Supports OpenAI, DeepSeek (direct & OpenRouter), Google Gemini, and custom providers.
+    """
+    load_dotenv(find_dotenv(usecwd=True), override=True)
+    if not model_name:
+        model_name = os.getenv("LLM_MODEL", "deepseek-chat")
 
-    if model_name.startswith("gpt-"):
-        # For OpenAI models
+    if model_name.startswith("gpt-") or model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4"):
         return openai.Client(
-            base_url=os.getenv("OPENAI_URL"), api_key=os.getenv("OPENAI_API_KEY")
+            base_url=os.getenv("OPENAI_URL", "https://api.openai.com/v1"),
+            api_key=os.getenv("OPENAI_API_KEY"),
         )
-    elif "/" in model_name:  # from openrouter
+    # Check OpenRouter / Generic Gateway
+    openrouter_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("LLM_API_KEY")
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    base_url = os.getenv("BASE_URL", "https://openrouter.ai/api/v1")
+
+    # If user specifies OpenRouter model with '/'
+    if "/" in model_name:
         return openai.Client(
-            base_url=os.getenv("BASE_URL"), api_key=os.getenv("LLM_API_KEY")
+            base_url=base_url,
+            api_key=openrouter_key or deepseek_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/hojjatkarami/FeatEHR-LLM",
+                "X-Title": "FeatEHR-LLM",
+            },
+        )
+    elif model_name.startswith("deepseek"):
+        # If user provided official DeepSeek key or specified deepseek URL
+        if deepseek_key and not deepseek_key.startswith("your_"):
+            return openai.Client(
+                base_url=os.getenv("DEEPSEEK_URL", "https://api.deepseek.com"),
+                api_key=deepseek_key,
+            )
+        # Otherwise fallback to OpenRouter with automatic prefix
+        return openai.Client(
+            base_url=base_url,
+            api_key=openrouter_key or deepseek_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/hojjatkarami/FeatEHR-LLM",
+                "X-Title": "FeatEHR-LLM",
+            },
         )
     elif model_name.startswith("gemini-"):
-        # For Gemini models
         return openai.Client(
-            base_url=os.getenv("GOOGLE_URL"), api_key=os.getenv("GOOGLE_API_KEY")
+            base_url=os.getenv("GOOGLE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"),
+            api_key=os.getenv("GOOGLE_API_KEY"),
         )
+    else:
+        # Fallback to general LLM configuration or DeepSeek/OpenAI
+        api_key = (
+            os.getenv("DEEPSEEK_API_KEY")
+            or os.getenv("LLM_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or os.getenv("GOOGLE_API_KEY")
+        )
+        base_url = os.getenv("BASE_URL") or os.getenv("DEEPSEEK_URL") or os.getenv("OPENAI_URL")
+        return openai.Client(
+            base_url=base_url,
+            api_key=api_key,
+        )
+
+
+def call_structured_llm(
+    model,
+    model_name: str,
+    messages: list,
+    response_format: Any,
+    temperature: float = 1.0,
+    max_tokens: int = 14000,
+    n: int = 1,
+):
+    """
+    Call LLM with structured output parsing, with automatic fallback to json_object mode
+    for models and endpoints (such as direct DeepSeek api.deepseek.com) that do not support
+    OpenAI's strict json_schema beta endpoint.
+    """
+    extra_body = {}
+    if "/" in model_name or "deepseek" in model_name or "r1" in model_name or "flash" in model_name:
+        extra_body["reasoning"] = {"max_tokens": 1500}
+
+    try:
+        kwargs = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "n": n,
+            "response_format": response_format,
+        }
+        if extra_body:
+            kwargs["extra_body"] = extra_body
+
+        answer = model.beta.chat.completions.parse(**kwargs)
+        return answer
+    except Exception as e:
+        logger.warning(
+            f"model.beta.chat.completions.parse failed ({e}). Falling back to JSON mode parsing."
+        )
+
+        schema_json = json.dumps(response_format.model_json_schema(), indent=2)
+        system_instruction = (
+            f"\n\nIMPORTANT: You MUST respond strictly with valid JSON conforming to this JSON schema:\n{schema_json}\n"
+            f"Do not include markdown code fences (e.g. ```json), commentary, or text outside the raw JSON object."
+        )
+
+        fallback_messages = [m.copy() for m in messages]
+        if fallback_messages and fallback_messages[0]["role"] == "system":
+            fallback_messages[0]["content"] += system_instruction
+        else:
+            fallback_messages.insert(0, {"role": "system", "content": system_instruction})
+
+        try:
+            kwargs = {
+                "model": model_name,
+                "messages": fallback_messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "n": n,
+                "response_format": {"type": "json_object"},
+            }
+            if extra_body:
+                kwargs["extra_body"] = extra_body
+            raw_response = model.chat.completions.create(**kwargs)
+        except Exception as e2:
+            logger.warning(f"json_object response_format failed ({e2}), retrying without explicit response_format...")
+            kwargs = {
+                "model": model_name,
+                "messages": fallback_messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "n": n,
+            }
+            if extra_body:
+                kwargs["extra_body"] = extra_body
+            raw_response = model.chat.completions.create(**kwargs)
+
+        class MockChoice:
+            def __init__(self, message, parsed):
+                self.message = message
+                self.parsed = parsed
+
+        class MockMessage:
+            def __init__(self, content, parsed):
+                self.content = content
+                self.parsed = parsed
+
+        class MockUsage:
+            def __init__(self, usage):
+                self.prompt_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
+                self.completion_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
+                self.total_tokens = getattr(usage, "total_tokens", 0) if usage else 0
+
+        class MockAnswer:
+            def __init__(self, choices, usage):
+                self.choices = choices
+                self.usage = usage
+
+        choices = []
+        for choice in raw_response.choices:
+            content = (choice.message.content or "").strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            elif content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+
+            try:
+                parsed = response_format.model_validate_json(content)
+            except Exception:
+                try:
+                    data = json.loads(content)
+                    parsed = response_format.model_validate(data)
+                except Exception as parse_err:
+                    logger.error(f"Failed to validate JSON: {parse_err}")
+                    parsed = None
+
+            mock_msg = MockMessage(content=content, parsed=parsed)
+            choices.append(MockChoice(message=mock_msg, parsed=parsed))
+
+        usage = MockUsage(getattr(raw_response, "usage", None))
+        return MockAnswer(choices=choices, usage=usage)
 
 
 def get_tools_string(list=None):
@@ -1000,21 +1174,23 @@ def design_feature_multi(params):
     # print(prompt)
     model = get_llm_client(model_openai)
     print("Thinking ...")
-    answer = model.beta.chat.completions.parse(
-        model=model_openai,  # Updated model name if necessary
+    answer = call_structured_llm(
+        model=model,
+        model_name=model_openai,
         messages=messages,
         temperature=temperature,
         max_tokens=max_new_tokens,
         n=1,
         response_format=Answer,
     )
-    wandb.log(
-        {
-            "prompt_tokens": answer.usage.prompt_tokens,
-            "completion_tokens": answer.usage.completion_tokens,
-            "total_tokens": answer.usage.total_tokens,
-        }
-    )
+    if wandb.run is not None:
+        wandb.log(
+            {
+                "prompt_tokens": answer.usage.prompt_tokens,
+                "completion_tokens": answer.usage.completion_tokens,
+                "total_tokens": answer.usage.total_tokens,
+            }
+        )
     parsed_answer = json.loads(answer.choices[0].message.content)
 
     # logger.info(f"\tGenerated {N_Q} questions in {CATEGORY} category")
@@ -1051,6 +1227,14 @@ def design_feature_multi(params):
 def check_syntax(fun_names, fun_strs):
     valid_functions = {}
     for fun_name, fun_str in zip(fun_names, fun_strs):
+        if "\\n" in fun_str:
+            fun_str = fun_str.replace("\\n", "\n")
+        if "\\t" in fun_str:
+            fun_str = fun_str.replace("\\t", "    ")
+        if "def " in fun_str:
+            fun_str = "def " + fun_str.split("def ", 1)[1]
+        if "```" in fun_str:
+            fun_str = fun_str.split("```")[0].strip()
         try:  # check the syntax
             exec(fun_str)
             valid_functions[fun_name] = fun_str
@@ -1156,20 +1340,36 @@ def process_functions3(answer):
 
 
 def process_functions_single(answer):
+    fun_strs = []
+    for a in answer:
+        try:
+            data = json.loads(a) if isinstance(a, str) else a
+            for q in data["answers"]:
+                script = q["function_script"]
+                if "\\n" in script:
+                    script = script.replace("\\n", "\n")
+                if "\\t" in script:
+                    script = script.replace("\\t", "    ")
+                if "def " in script:
+                    script = "def " + script.split("def ", 1)[1]
+                if "```" in script:
+                    script = script.split("```")[0].strip()
+                fun_strs.append(script.strip())
+        except Exception as e:
+            print(f"Error parsing answer: {e}")
 
-    fun_strs = [q["function_script"] for a in answer for q in json.loads(a)["answers"]]
-
-    fun_names = [fun_str.split("def")[1].split("(")[0][1:] for fun_str in fun_strs]
+    fun_names = []
+    clean_fun_strs = []
+    for fun_str in fun_strs:
+        if "def " in fun_str and "(" in fun_str:
+            name = fun_str.split("def ", 1)[1].split("(", 1)[0].strip()
+            fun_names.append(name)
+            clean_fun_strs.append(fun_str)
 
     # adding _{ii} to the function name to avoid duplicates
     fun_names_new, fun_strs_new = [], []
-    for ii, (fun_name, fun_str) in enumerate(zip(fun_names, fun_strs)):
-
-        # replace fun_name in fun_str with fun_name_i
-
+    for ii, (fun_name, fun_str) in enumerate(zip(fun_names, clean_fun_strs)):
         fun_str_new = fun_str.replace(fun_name, f"{fun_name}_{ii}")
-        # # add explanation to the function as a comment
-        # fun_str_new = f"# {explanations[ii]}\n" + fun_str_new
         fun_strs_new.append(fun_str_new)
         fun_names_new.append(f"{fun_name}_{ii}")
 
@@ -1245,8 +1445,9 @@ def design_rule_multi(params):
 
     final_answer = []
     print("Thinking ...")
-    answer = model.beta.chat.completions.parse(
-        model=model_openai,  # Updated model name if necessary
+    answer = call_structured_llm(
+        model=model,
+        model_name=model_openai,
         messages=messages,
         temperature=temperature,
         max_tokens=max_new_tokens,
@@ -1342,8 +1543,9 @@ def design_rule_single(params):
 
     final_answer = []
     print("Thinking ...")
-    answer = model.beta.chat.completions.parse(
-        model=model_openai,  # Updated model name if necessary
+    answer = call_structured_llm(
+        model=model,
+        model_name=model_openai,
         messages=messages,
         temperature=temperature,
         max_tokens=max_new_tokens,

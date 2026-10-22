@@ -467,11 +467,10 @@ def _generate_and_evaluate_rules(
     print(f"\t[info] Rule Generation")
 
     var_names = list(units_full.keys())
-    partial_func = partial(process_rules)
-    num_processes = min(args.n_processes.rules, mp.cpu_count())
-    
-    with mp.Pool(num_processes) as pool:
-        rule_data_nested = list(pool.imap(partial_func, var_names))
+    from concurrent.futures import ThreadPoolExecutor
+    num_workers = min(args.n_processes.rules, 10)
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        rule_data_nested = list(executor.map(process_rules, var_names))
 
     rule_data_flat = [
         rule for feature_rules in rule_data_nested for rule in feature_rules
@@ -587,6 +586,10 @@ def main(args: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    try:
+        mp.set_start_method("fork", force=True)
+    except Exception:
+        pass
     sys.path.append(os.path.abspath(os.getcwd()))
     print(sys.path)
 

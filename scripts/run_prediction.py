@@ -5,6 +5,7 @@ with bootstrap confidence intervals.
 """
 
 # Standard library imports
+from datetime import datetime
 import json
 import multiprocessing as mp
 import os
@@ -616,6 +617,7 @@ def save_results_to_csv(results: List[Dict], data_name: str, configs: Dict):
     df = df[[col for col in df.columns if col != "d"] + ["d"]]
 
     output_path = f"results/{data_name}_perf.csv"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     if not os.path.exists(output_path):
         df.to_csv(output_path, index=False)

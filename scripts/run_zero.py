@@ -51,21 +51,23 @@ def process_patient(i):
         {"role": "user", "content": question},
     ]
 
-    answer = model.beta.chat.completions.parse(
-        model=MODEL_OPENAI,  # Updated model name if necessary
+    answer = call_structured_llm(
+        model=model,
+        model_name=MODEL_OPENAI,
         messages=messages,
         temperature=TEMPERATURE,
         max_tokens=MAX_NEW_TOKENS,
         response_format=RiskAnalysis,
     )
 
-    wandb.log(
-        {
-            "prompt_tokens": answer.usage.prompt_tokens,
-            "completion_tokens": answer.usage.completion_tokens,
-            "total_tokens": answer.usage.total_tokens,
-        }
-    )
+    if wandb.run is not None:
+        wandb.log(
+            {
+                "prompt_tokens": answer.usage.prompt_tokens,
+                "completion_tokens": answer.usage.completion_tokens,
+                "total_tokens": answer.usage.total_tokens,
+            }
+        )
 
     messages.append(
         {"role": "assistant", "content": dict(answer.choices[0].message.parsed)}

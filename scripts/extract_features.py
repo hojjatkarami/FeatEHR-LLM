@@ -442,7 +442,10 @@ def main(args):
     print(f"Results saved to {DATA_DIR}/featehr-llm/{DATA}/{SPLIT}/{VERSION}/data.csv")
 
 if __name__ == "__main__":
-
+    try:
+        mp.set_start_method("fork", force=True)
+    except Exception:
+        pass
     random.seed(42)
     global data, function_names, total_errors, history, all_vars
 

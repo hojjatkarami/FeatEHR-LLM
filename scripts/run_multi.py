@@ -829,6 +829,10 @@ def main(args: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    try:
+        mp.set_start_method("fork", force=True)
+    except Exception:
+        pass
     sys.path.append(os.path.abspath(os.getcwd()))
     print(sys.path)
 
